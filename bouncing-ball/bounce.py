@@ -62,14 +62,17 @@ Discrete boundary condition:
 
 """
 
+
+
+
 import numpy as np
 import matplotlib.pyplot as plt
 
 
-def bounce(h0, v0=0, cor=1, dt=0.01, nsteps=1000, g=9.81):
+def bounce(h0, v0=0, cor=1, dt=0.01, nsteps=1000, g=-9.81):
     h = np.empty(nsteps+1)
 
-    a = -g*dt*dt
+    a = g*dt*dt
     h[0] = 0.5*a + h0 - dt*v0
     h[1] = h0
 
@@ -83,26 +86,40 @@ def bounce(h0, v0=0, cor=1, dt=0.01, nsteps=1000, g=9.81):
 
     return h[1:]
 
+def bounce_true(h0, v0, cor=1, dt=0.01, nsteps=1000, g=-9.81):
+    h = np.empty(nsteps)
 
-def draw_circle(ax, y, x=0, r=3):
-    rads = np.linspace(0, 360, 100)*180/np.pi
+    EPS_H = 1E-3
 
-    xs = x + np.cos(rads)*r
-    ys = y + np.sin(rads)*r
+    nref = 0
+    for n in range(nsteps):
+        time = (n-nref)*dt
+        h[n] = h0 + v0*time + 0.5*g*time*time
 
-    ax.plot(xs, ys, color="k")
+        if h[n] < EPS_H:
+            h0 = h[n]
+            v0 = (v0 + g*time)/-cor
+            nref = n 
 
+    return h
 
 if __name__ == "__main__":
 
-    h = bounce(h0=100, v0=0, cor=1, dt=0.01, nsteps=1500)
+    h0, v0, cor = 90, -10, 1.1
+    dt, nsteps = 0.01, 3000
+    g = -5
 
-    for n, h in enumerate(h[::20]):
-        fig, ax = plt.subplots(figsize=(3,3), dpi=100)
-        draw_circle(ax, h)
+    hs = bounce(h0=h0, v0=v0, cor=cor, dt=dt, nsteps=nsteps, g=g)
+    hs_true = bounce_true(h0=h0, v0=v0, cor=cor, dt=dt, nsteps=nsteps, g=g)
+
+    for n, (h, h_true) in enumerate(zip(hs[::100], hs_true[::100])):
+        fig, ax = plt.subplots(figsize=(3, 3), dpi=100)
+        ax.plot(0, h, marker="o", color="k", linestyle="", markersize=5, zorder=1, label="Finite Difference")
+        ax.plot(0, h_true, marker="x", color="r", linestyle="", markersize=3, zorder=2, label="Analytical")
         ax.set_xlim(-55, 55)
         ax.set_xticks([])
-        ax.set_ylim(0, 110)
+        ax.set_ylim(0, 120)
         ax.set_yticks([])
+        ax.legend(loc="upper left")
         plt.savefig(str(n).zfill(3)+".png", dpi=100)
         plt.close()
